@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { matchJob } from '../api/resumeApi'
+import { matchJob, generateCoverLetter } from '../api/resumeApi'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Navbar from '../components/Navbar'
 
@@ -11,6 +11,11 @@ export default function JobMatch() {
   const [matchResult, setMatchResult] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const [coverLetter, setCoverLetter] = useState('')
+  const [isGeneratingLetter, setIsGeneratingLetter] = useState(false)
+  const [letterError, setLetterError] = useState('')
+  const [copied, setCopied] = useState(false)
 
   const onAnalyze = async (e) => {
     e.preventDefault()
@@ -31,6 +36,8 @@ export default function JobMatch() {
     setIsLoading(true)
     setError('')
     setMatchResult(null)
+    setCoverLetter('')
+    setLetterError('')
 
     try {
       const result = await matchJob(resumeText, jobDescription.trim())
@@ -45,6 +52,48 @@ export default function JobMatch() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const onGenerateCoverLetter = async () => {
+    setIsGeneratingLetter(true)
+    setLetterError('')
+    setCoverLetter('')
+
+    try {
+      const result = await generateCoverLetter(resumeText, jobDescription.trim())
+      setCoverLetter(result.coverLetter || '')
+    } catch (err) {
+      const message =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Cover letter generation failed. Please try again.'
+      setLetterError(message)
+    } finally {
+      setIsGeneratingLetter(false)
+    }
+  }
+
+  const onCopyCoverLetter = async () => {
+    try {
+      await navigator.clipboard.writeText(coverLetter)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setLetterError('Could not copy to clipboard.')
+    }
+  }
+
+  const onDownloadCoverLetter = () => {
+    const blob = new Blob([coverLetter], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'cover-letter.txt'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const matchScore = matchResult?.matchScore ?? matchResult?.resumeScore ?? 0
@@ -228,6 +277,61 @@ export default function JobMatch() {
                 </div>
               </section>
             )}
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    AI Cover Letter
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Generate a tailored cover letter based on your resume and this job description
+                  </p>
+                </div>
+                {!isGeneratingLetter && (
+                  <button
+                    onClick={onGenerateCoverLetter}
+                    className="shrink-0 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
+                  >
+                    {coverLetter ? 'Regenerate' : 'Generate Cover Letter'}
+                  </button>
+                )}
+              </div>
+
+              {isGeneratingLetter && (
+                <div className="mt-4 rounded-xl border border-brand-200 bg-brand-50/50 py-4">
+                  <LoadingSpinner label="Writing your cover letter..." />
+                </div>
+              )}
+
+              {letterError && (
+                <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {letterError}
+                </p>
+              )}
+
+              {coverLetter && !isGeneratingLetter && (
+                <div className="mt-4">
+                  <div className="whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm leading-relaxed text-slate-700">
+                    {coverLetter}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      onClick={onCopyCoverLetter}
+                      className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                    >
+                      {copied ? 'Copied!' : 'Copy to Clipboard'}
+                    </button>
+                    <button
+                      onClick={onDownloadCoverLetter}
+                      className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                    >
+                      Download as .txt
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
           </div>
         )}
       </main>

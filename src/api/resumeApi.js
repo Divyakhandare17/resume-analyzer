@@ -115,3 +115,10 @@ export async function fetchHistory() {
   const { data } = await client.get(HISTORY_API_URL, { params: { userId } })
   return normalizeHistory(data)
 }
+export const generateCoverLetter = async (resumeText, jobDescription) => {
+  const response = await axios.post(
+    'https://fdn0j8ff50.execute-api.ap-south-1.amazonaws.com/default/generateCoverLetter',
+    { resumeText, jobDescription }
+  )
+  return response.data
+}
