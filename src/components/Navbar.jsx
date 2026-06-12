@@ -4,6 +4,7 @@ const navLinks = [
   { to: '/', label: 'Upload' },
   { to: '/results', label: 'Results' },
   { to: '/job-match', label: 'Job Match' },
+  { to: '/history', label: 'History' },
 ]
 
 export default function Navbar() {

@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import jsPDF from 'jspdf'
 import Navbar from '../components/Navbar'
 import ScoreRing from '../components/ScoreRing'
 
@@ -76,21 +77,119 @@ export default function Results() {
     improvements = [],
   } = analysis
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 15
+    let y = 20
+
+    doc.setFontSize(20)
+    doc.setFont(undefined, 'bold')
+    doc.text('Resume Analysis Report', margin, y)
+    y += 12
+
+    doc.setFontSize(12)
+    doc.setFont(undefined, 'normal')
+    if (fileName) {
+      doc.text(`File: ${fileName}`, margin, y)
+      y += 8
+    }
+    doc.text(`Generated: ${new Date().toLocaleString()}`, margin, y)
+    y += 12
+
+    doc.setFontSize(16)
+    doc.setFont(undefined, 'bold')
+    doc.text(`Resume Score: ${resumeScore} / 100`, margin, y)
+    y += 12
+
+    if (skills.length > 0) {
+      doc.setFontSize(14)
+      doc.setFont(undefined, 'bold')
+      doc.text('Skills', margin, y)
+      y += 8
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'normal')
+      const skillsText = skills.join(', ')
+      const skillLines = doc.splitTextToSize(skillsText, pageWidth - margin * 2)
+      doc.text(skillLines, margin, y)
+      y += skillLines.length * 6 + 8
+    }
+
+    if (experienceSummary) {
+      doc.setFontSize(14)
+      doc.setFont(undefined, 'bold')
+      doc.text('Experience Summary', margin, y)
+      y += 8
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'normal')
+      const expLines = doc.splitTextToSize(experienceSummary, pageWidth - margin * 2)
+      doc.text(expLines, margin, y)
+      y += expLines.length * 6 + 8
+    }
+
+    if (improvements.length > 0) {
+      if (y > 250) {
+        doc.addPage()
+        y = 20
+      }
+      doc.setFontSize(14)
+      doc.setFont(undefined, 'bold')
+      doc.text('Improvements', margin, y)
+      y += 8
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'normal')
+      improvements.forEach((item, index) => {
+        if (y > 270) {
+          doc.addPage()
+          y = 20
+        }
+        const lines = doc.splitTextToSize(`${index + 1}. ${item}`, pageWidth - margin * 2)
+        doc.text(lines, margin, y)
+        y += lines.length * 6 + 4
+      })
+    }
+
+    doc.save('resume-report.pdf')
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-            Analysis Results
-          </h1>
-          {fileName && (
-            <p className="mt-2 text-slate-600">
-              Resume analyzed:{' '}
-              <span className="font-medium text-slate-800">{fileName}</span>
-            </p>
-          )}
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+              Analysis Results
+            </h1>
+            {fileName && (
+              <p className="mt-2 text-slate-600">
+                Resume analyzed:{' '}
+                <span className="font-medium text-slate-800">{fileName}</span>
+              </p>
+            )}
+          </div>
+          <button
+            onClick={handleDownloadPDF}
+            className="inline-flex items-center gap-2 self-start rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 sm:self-auto"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+              />
+            </svg>
+            Download Report as PDF
+          </button>
         </div>
 
         <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
