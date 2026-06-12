@@ -1,6 +1,6 @@
 # ResumeAI — AI-Powered Resume Analyzer
 
-ResumeAI is a full-stack web application that analyzes resumes using AI. Users upload a PDF resume and receive an instant score, identified skills, an experience summary, and personalized improvement suggestions. It also includes a Job Match feature that compares a resume against a job description, an Analysis History page backed by DynamoDB, and the ability to download results as a PDF report.
+ResumeAI is a full-stack web application that analyzes resumes using AI. Users upload a PDF resume and receive an instant score, identified skills, an experience summary, and personalized improvement suggestions. It also includes a Job Match feature that compares a resume against a job description, an AI-generated cover letter tailored to that job, an Analysis History page backed by DynamoDB, and the ability to download results as a PDF report.
 
 **Live App:** https://main.d10rgg5wzovfno.amplifyapp.com/
 
@@ -15,6 +15,7 @@ ResumeAI is a full-stack web application that analyzes resumes using AI. Users u
 - Concise experience summary
 - Actionable improvement suggestions
 - Job Match: paste a job description and get a match percentage with missing skills
+- AI Cover Letter Generator: generates a tailored cover letter based on your resume and the job description, with copy and download options
 - Analysis History: view past resume analyses with scores and skills, stored in DynamoDB
 - Download a full analysis report as a PDF
 
@@ -33,7 +34,7 @@ ResumeAI is a full-stack web application that analyzes resumes using AI. Users u
 
 ### Backend (AWS Serverless)
 
-- AWS Lambda — handles resume analysis, job matching, and history retrieval
+- AWS Lambda — handles resume analysis, job matching, cover letter generation, and history retrieval
 - AWS API Gateway — exposes Lambda functions as HTTP endpoints
 - AWS DynamoDB — stores past analysis results for the History feature
 - AWS S3 — file storage
@@ -41,7 +42,7 @@ ResumeAI is a full-stack web application that analyzes resumes using AI. Users u
 
 ### AI
 
-- Groq API (Llama 3.3 70B model) for resume analysis and job matching
+- Groq API (Llama 3.3 70B model) for resume analysis, job matching, and cover letter generation
 
 ---
 
@@ -73,6 +74,18 @@ POST { resumeText, jobDescription } → Lambda
 AI compares resume vs job description
    ↓
 Returns match score + missing skills
+```
+
+For Cover Letter Generation:
+
+```
+User clicks "Generate Cover Letter" on Job Match results
+   ↓
+POST { resumeText, jobDescription } → API Gateway → Lambda (generateCoverLetter)
+   ↓
+Lambda calls Groq AI to write a tailored cover letter
+   ↓
+Returns cover letter text → Frontend displays it with copy/download options
 ```
 
 For History:
@@ -130,12 +143,16 @@ The app will be available at `http://localhost:5173`.
 2. Create a DynamoDB table (`resume-results`) with `userId` as the partition key.
 3. Create a Lambda function (`analyzeResume`) with Node.js 22.x runtime.
    - Attach the **AmazonDynamoDBFullAccess** policy to its execution role so it can save results.
-4. Add a `GROQ_API_KEY` environment variable to the Lambda (get a free key from [console.groq.com](https://console.groq.com/)).
-5. Attach an API Gateway (HTTP API) trigger to the Lambda with CORS enabled.
-6. Create a second Lambda function (`getHistory`) with Node.js 22.x runtime.
+   - Add a `GROQ_API_KEY` environment variable (get a free key from [console.groq.com](https://console.groq.com/)).
+   - Attach an API Gateway (HTTP API) trigger with CORS enabled.
+4. Create a second Lambda function (`getHistory`) with Node.js 22.x runtime.
    - Attach the **AmazonDynamoDBFullAccess** policy to its execution role.
    - Attach an API Gateway (HTTP API) trigger with CORS enabled.
-7. Update the API URLs in the frontend (`resumeApi.js` and the History page) to match your deployed endpoints.
+5. Create a third Lambda function (`generateCoverLetter`) with Node.js 22.x runtime.
+   - Add the same `GROQ_API_KEY` environment variable.
+   - Set the function timeout to 30 seconds (Groq response time can vary).
+   - Attach an API Gateway (HTTP API) trigger with CORS enabled.
+6. Update the API URLs in the frontend (`resumeApi.js`, History page, and Job Match page) to match your deployed endpoints.
 
 ---
 
